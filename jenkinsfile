@@ -1,0 +1,57 @@
+pipeline {
+   agent any
+   environment {
+        AWS_ACCOUNT_ID="261567501971"
+        AWS_DEFAULT_REGION="us-east-1"
+        IMAGE_REPO_NAME="node-app"
+        IMAGE_TAG="v1"
+        REPOSITORY_URI = "261567501971.dkr.ecr.us-east-1.amazonaws.com/jenkins-app"
+    }
+   stages {
+        stage('GitCheckout') {
+            steps {
+                checkout([
+                $class: 'GitSCM',
+                branches: [[name: 'refs/heads/main']],
+                doGenerateSubmoduleConfigurations: false,
+                extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'node-app']],
+                submoduleCfg: [],
+                userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/ManojNagendrachar/node-app.git']]
+		])
+            }
+        }
+        stage('build image and push to ECR') {
+            steps {
+		script{
+                    dockerImage = docker.build "${IMAGE_REPO_NAME}:${IMAGE_TAG}"
+                    sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 261567501971.dkr.ecr.us-east-1.amazonaws.com"
+                    sh "docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${REPOSITORY_URI}:$IMAGE_TAG"
+                    sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/manoj:v1"
+                }
+            }
+        }
+	stage ('deploy in app') {
+	    agent { 
+                label 'app-node'
+            }
+             steps {
+		script{
+                    def containerId = sh(
+                                        returnStdout: true,
+                                        script: '''
+                                         #!/bin/bash -ex
+                                         container_id=$(docker ps | grep manoj | awk '{print $1}') 
+                                         echo "${container_id}"
+                                        ''').trim()
+                    if (containerId) {
+                          echo "container id inside if =${containerId}"
+                          sh "docker stop ${containerId}"
+                    }
+
+                    sh "docker pull 6261567501971.dkr.ecr.us-east-1.amazonaws.com/manoj:v1"
+                    sh "docker run -itd -p 8090:8081 6261567501971.dkr.ecr.us-east-1.amazonaws.com/manoj:v1"
+                }
+            }
+	}
+    }
+}
