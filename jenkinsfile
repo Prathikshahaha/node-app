@@ -1,11 +1,11 @@
 pipeline {
    agent any
    environment {
-        AWS_ACCOUNT_ID="261567501971"
+        AWS_ACCOUNT_ID="727904144731"
         AWS_DEFAULT_REGION="us-east-1"
         IMAGE_REPO_NAME="node-app"
         IMAGE_TAG="v1"
-        REPOSITORY_URI = "261567501971.dkr.ecr.us-east-1.amazonaws.com/jenkins-app"
+        REPOSITORY_URI = "727904144731.dkr.ecr.us-east-1.amazonaws.com/jenkins-ecr"
     }
    stages {
         stage('GitCheckout') {
